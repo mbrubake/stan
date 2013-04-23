@@ -48,8 +48,10 @@ namespace stan {
         _ldltP->solveInPlace(invA);
       }
 
-      inline Eigen::Matrix<double,R,C> solve(const Eigen::Matrix<double,R,C> &B) const {
-        return _ldltP->solve(B);
+      template<typename Rhs>
+      inline const Eigen::internal::solve_retval<Eigen::LDLT< Eigen::Matrix<double,R,C> >, Rhs>
+      solve(const Eigen::MatrixBase<Rhs>& b) const {
+        return _ldltP->solve(b);
       }
 
       inline Eigen::Matrix<double,R,C> solveRight(const Eigen::Matrix<double,R,C> &B) const {

@@ -62,6 +62,13 @@ namespace stan {
         _alloc->compute(A);
       }
       
+
+      template<typename Rhs>
+      inline const Eigen::internal::solve_retval<Eigen::LDLT< Eigen::Matrix<double,R,C> >, Rhs>
+      solve(const Eigen::MatrixBase<Rhs>& b) const {
+        return _alloc->_ldlt->solve(b);
+      }
+      
       inline bool success() const {
         bool ret;
         ret = _alloc->_ldlt.info() == Eigen::Success;
@@ -351,26 +358,19 @@ namespace stan {
     }
 
     namespace {
-      template <int R2,int C2>
+      template <typename T2, int R2,int C2>
       class trace_inv_quad_form_ldlt_impl : public chainable_alloc {
       public:
-        template<typename T1, typename T2, typename T3,int R1,int C1,int R3,int C3>
+        template<typename T1, typename T3,int R1,int C1,int R3,int C3>
         trace_inv_quad_form_ldlt_impl(const Eigen::Matrix<T1,R1,C1> &D,
                                       const stan::math::LDLT_factor<T2,R2,C2> &A,
                                       const Eigen::Matrix<T3,R3,C3> &B)
-        : _Dtype(boost::type_traits::is_same<T1,var>::value?1:0),
-          _isVarA(boost::type_traits::is_same<T2,var>::value),
-          _isVarB(boost::type_traits::is_same<T3,var>::value)
+        : _Dtype(boost::is_same<T1,var>::value?1:0),
+          _isVarA(boost::is_same<T2,var>::value),
+          _isVarB(boost::is_same<T3,var>::value),
+          _ldlt(A)
         {
-          if (boost::type_traits::is_same<T2,var>::value) {
-            _alloc_ldlt = A._alloc;
-          }
-          else {
-            _alloc_ldlt = NULL;
-            _ldltP = A._ldltP;
-          }
-          
-          if (boost::type_traits::is_same<T3,var>::value) {
+          if (boost::is_same<T3,var>::value) {
             Eigen::Matrix<double,R3,C3> Bd(B.rows(),B.cols());
             _variB.resize(B.rows(),B.cols());
             for (size_t j = 0; j < B.cols(); j++) {
@@ -379,21 +379,15 @@ namespace stan {
                 Bd(i,j) = B(i,j).val();
               }
             }
-            if (boost::type_traits::is_same<T2,var>::value)
-              _AinvB.noalias() = _alloc_ldlt->_ldlt.solve(Bd);
-            else
-              _AinvB.noalias() = _ldltP->solve(Bd);
+            _AinvB.noalias() = _ldlt.solve(Bd);
             _C.noalias() = Bd.transpose()*_AinvB;
           }
           else {
-            if (boost::type_traits::is_same<T2,var>::value)
-              _AinvB.noalias() = _alloc_ldlt->_ldlt.solve(B);
-            else
-              _AinvB.noalias() = _ldltP->solve(B);
+            _AinvB.noalias() = _ldlt.solve(B);
             _C.noalias() = B.transpose()*_AinvB;
           }
           
-          if (boost::type_traits::is_same<T1,var>::value) {
+          if (boost::is_same<T1,var>::value) {
             _D.resize(D.rows(),D.cols());
             _variD.resize(D.rows(),D.cols());
             for (size_t j = 0; j < D.cols(); j++) {
@@ -410,22 +404,15 @@ namespace stan {
           _value = (_D*_C).trace();
         }
         
-        template<typename T2, typename T3,int R3,int C3>
+        template<typename T3,int R3,int C3>
         trace_inv_quad_form_ldlt_impl(const stan::math::LDLT_factor<T2,R2,C2> &A,
                                       const Eigen::Matrix<T3,R3,C3> &B)
         : _Dtype(2),
-        _isVarA(boost::type_traits::is_same<T2,var>::value),
-        _isVarB(boost::type_traits::is_same<T3,var>::value)
+        _isVarA(boost::is_same<T2,var>::value),
+        _isVarB(boost::is_same<T3,var>::value),
+        _ldlt(A)
         {
-          if (boost::type_traits::is_same<T2,var>::value) {
-            _alloc_ldlt = A._alloc;
-          }
-          else {
-            _alloc_ldlt = NULL;
-            _ldltP = A._ldltP;
-          }
-          
-          if (boost::type_traits::is_same<T3,var>::value) {
+          if (boost::is_same<T3,var>::value) {
             Eigen::Matrix<double,R3,C3> Bd(B.rows(),B.cols());
             _variB.resize(B.rows(),B.cols());
             for (size_t j = 0; j < B.cols(); j++) {
@@ -434,26 +421,19 @@ namespace stan {
                 Bd(i,j) = B(i,j).val();
               }
             }
-            if (boost::type_traits::is_same<T2,var>::value)
-              _AinvB.noalias() = _alloc_ldlt->_ldlt.solve(Bd);
-            else
-              _AinvB.noalias() = _ldltP->solve(Bd);
+            _AinvB.noalias() = _ldlt.solve(Bd);
             _value = (Bd.transpose()*_AinvB).trace();
           }
           else {
-            if (boost::type_traits::is_same<T2,var>::value)
-              _AinvB.noalias() = _alloc_ldlt->_ldlt.solve(B);
-            else
-              _AinvB.noalias() = _ldltP->solve(B);
+            _AinvB.noalias() = _ldlt.solve(B);
             _value = (B.transpose()*_AinvB).trace();
           }
         }
         
         const int _Dtype; // 0 = double, 1 = var, 2 = missing
-        const bool _isVarB;
         const bool _isVarA;
-        const LDLT_alloc<R2,C2> *_alloc_ldlt;
-        boost::shared_ptr< Eigen::LDLT< Eigen::Matrix<double,R2,C2> > > _ldltP;
+        const bool _isVarB;
+        stan::math::LDLT_factor<T2,R2,C2> _ldlt;
         Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> _D;
         Eigen::Matrix<vari*,Eigen::Dynamic,Eigen::Dynamic> _variB;
         Eigen::Matrix<vari*,Eigen::Dynamic,Eigen::Dynamic> _variD;
@@ -462,10 +442,10 @@ namespace stan {
         double _value;
       };
 
-      template <int R2,int C2>
+      template <typename T2,int R2,int C2>
       class trace_inv_quad_form_ldlt_vari : public vari {
       public:
-        trace_inv_quad_form_ldlt_vari(trace_inv_quad_form_ldlt_impl<R2,C2> *impl)
+        trace_inv_quad_form_ldlt_vari(trace_inv_quad_form_ldlt_impl<T2,R2,C2> *impl)
         : vari(impl->_value), _impl(impl)
         {}
         
@@ -474,7 +454,7 @@ namespace stan {
           // aA = -aF * inv(A') * B * D' * B' * inv(A')
           // aB = aF*(inv(A) * B * D + inv(A') * B * D')
           // aD = aF*(B' * inv(A) * B)
-          if (_impl->_isVarA) {
+          if (boost::is_same<T2,var>::value) {
             Eigen::Matrix<double,R2,C2> aA;
             if (_impl->_Dtype != 2)
               aA = -adj_*(_impl->_AinvB*_impl->_D.transpose()*_impl->_AinvB.transpose());
@@ -482,7 +462,7 @@ namespace stan {
               aA = -adj_*(_impl->_AinvB*_impl->_AinvB.transpose());
             for (size_type j = 0; j < aA.cols(); j++)
               for (size_type i = 0; i < aA.rows(); i++)
-                _impl->_alloc_ldlt->_variA(i,j)->adj_ += aA(i,j);
+                _impl->_ldlt._alloc->_variA(i,j)->adj_ += aA(i,j);
           }
 
           if (_impl->_isVarB) {
@@ -503,7 +483,7 @@ namespace stan {
           }
         }
         
-        trace_inv_quad_form_ldlt_impl<R2,C2> *_impl;
+        trace_inv_quad_form_ldlt_impl<T2,R2,C2> *_impl;
       };
     }
     
@@ -522,9 +502,9 @@ namespace stan {
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<R2,C2>(D,A,B);
+      trace_inv_quad_form_ldlt_impl<T2,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<T2,R2,C2>(D,A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<T2,R2,C2>(_impl));
     }
     template <typename T1,int R1,int C1,int R2,int C2,typename T3,int R3,int C3>
     inline var
@@ -536,9 +516,9 @@ namespace stan {
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<R2,C2>(D,A,B);
+      trace_inv_quad_form_ldlt_impl<var,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<var,R2,C2>(D,A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<var,R2,C2>(_impl));
     }
     template <typename T1,int R1,int C1,typename T2,int R2,int C2,int R3,int C3>
     inline var
@@ -550,9 +530,9 @@ namespace stan {
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<R2,C2>(D,A,B);
+      trace_inv_quad_form_ldlt_impl<T2,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<T2,R2,C2>(D,A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<T2,R2,C2>(_impl));
     }
     
     /*
@@ -565,26 +545,22 @@ namespace stan {
     trace_inv_quad_form_ldlt(const stan::math::LDLT_factor<var,R2,C2> &A,
                              const Eigen::Matrix<T3,R3,C3> &B)
     {
-      stan::math::validate_square(D,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
-      stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<R2,C2>(A,B);
+      trace_inv_quad_form_ldlt_impl<var,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<var,R2,C2>(A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<var,R2,C2>(_impl));
     }
     template <typename T2,int R2,int C2,int R3,int C3>
     inline var
     trace_inv_quad_form_ldlt(const stan::math::LDLT_factor<T2,R2,C2> &A,
                              const Eigen::Matrix<var,R3,C3> &B)
     {
-      stan::math::validate_square(D,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
-      stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<R2,C2>(A,B);
+      trace_inv_quad_form_ldlt_impl<T2,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<T2,R2,C2>(A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<T2,R2,C2>(_impl));
     }
   }
 }
