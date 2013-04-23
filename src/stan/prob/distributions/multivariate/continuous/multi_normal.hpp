@@ -260,6 +260,7 @@ namespace stan {
       using stan::math::dot_product;
       using stan::math::log_determinant_ldlt;
       using stan::math::mdivide_left_ldlt;
+      using stan::math::trace_inv_quad_form_ldlt;
       using stan::math::LDLT_factor;
       
       if (!check_size_match(function, 
@@ -318,10 +319,11 @@ namespace stan {
           Eigen::Dynamic, 1> y_minus_mu(y.size());
         for (int i = 0; i < y.size(); i++)
           y_minus_mu(i) = y(i)-mu(i);
-        Eigen::Matrix<typename 
-          boost::math::tools::promote_args<T_covar,T_loc,T_y>::type,
-          Eigen::Dynamic, 1> Sinv_y_minus_mu(mdivide_left_ldlt(ldlt_Sigma,y_minus_mu));
-        lp -= 0.5 * dot_product(y_minus_mu,Sinv_y_minus_mu);
+//        Eigen::Matrix<typename 
+//          boost::math::tools::promote_args<T_covar,T_loc,T_y>::type,
+//          Eigen::Dynamic, 1> Sinv_y_minus_mu(mdivide_left_ldlt(ldlt_Sigma,y_minus_mu));
+//        lp -= 0.5 * dot_product(y_minus_mu,Sinv_y_minus_mu);
+        lp -= 0.5 * trace_inv_quad_form_ldlt(ldlt_Sigma,y_minus_mu);
       }
       return lp;
     }
