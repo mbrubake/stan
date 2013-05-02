@@ -66,7 +66,7 @@ namespace stan {
       template<typename Rhs>
       inline const Eigen::internal::solve_retval<Eigen::LDLT< Eigen::Matrix<double,R,C> >, Rhs>
       solve(const Eigen::MatrixBase<Rhs>& b) const {
-        return _alloc->_ldlt->solve(b);
+        return _alloc->_ldlt.solve(b);
       }
       
       inline bool success() const {
@@ -360,7 +360,47 @@ namespace stan {
     namespace {
       template <typename T2, int R2,int C2>
       class trace_inv_quad_form_ldlt_impl : public chainable_alloc {
-      public:
+      private:
+        template<int R3,int C3>
+        inline void initializeB(const Eigen::Matrix<var,R3,C3> &B,bool haveD) { 
+          Eigen::Matrix<double,R3,C3> Bd(B.rows(),B.cols());
+          _variB.resize(B.rows(),B.cols());
+          for (size_t j = 0; j < B.cols(); j++) {
+            for (size_t i = 0; i < B.rows(); i++) {
+              _variB(i,j) = B(i,j).vi_;
+              Bd(i,j) = B(i,j).val();
+            }
+          }
+          _AinvB = _ldlt.solve(Bd);
+          if (haveD) 
+            _C.noalias() = Bd.transpose()*_AinvB;
+          else
+            _value = (Bd.transpose()*_AinvB).trace();
+        }
+        template<int R3,int C3>
+        inline void initializeB(const Eigen::Matrix<double,R3,C3> &B,bool haveD) {
+          _AinvB = _ldlt.solve(B);
+          if (haveD) 
+            _C.noalias() = B.transpose()*_AinvB;
+          else
+            _value = (B.transpose()*_AinvB).trace();
+        }
+        template<int R1,int C1>
+        inline void initializeD(const Eigen::Matrix<var,R1,C1> &D) {
+          _D.resize(D.rows(),D.cols());
+          _variD.resize(D.rows(),D.cols());
+          for (size_t j = 0; j < D.cols(); j++) {
+            for (size_t i = 0; i < D.rows(); i++) {
+              _variD(i,j) = D(i,j).vi_;
+              _D(i,j) = D(i,j).val();
+            }
+          }
+        }
+        template<int R1,int C1>
+        inline void initializeD(const Eigen::Matrix<double,R1,C1> &D) {
+          _D = D;
+        }
+       public:
         template<typename T1, typename T3,int R1,int C1,int R3,int C3>
         trace_inv_quad_form_ldlt_impl(const Eigen::Matrix<T1,R1,C1> &D,
                                       const stan::math::LDLT_factor<T2,R2,C2> &A,
@@ -370,36 +410,8 @@ namespace stan {
           _isVarB(boost::is_same<T3,var>::value),
           _ldlt(A)
         {
-          if (boost::is_same<T3,var>::value) {
-            Eigen::Matrix<double,R3,C3> Bd(B.rows(),B.cols());
-            _variB.resize(B.rows(),B.cols());
-            for (size_t j = 0; j < B.cols(); j++) {
-              for (size_t i = 0; i < B.rows(); i++) {
-                _variB(i,j) = B(i,j).vi_;
-                Bd(i,j) = B(i,j).val();
-              }
-            }
-            _AinvB.noalias() = _ldlt.solve(Bd);
-            _C.noalias() = Bd.transpose()*_AinvB;
-          }
-          else {
-            _AinvB.noalias() = _ldlt.solve(B);
-            _C.noalias() = B.transpose()*_AinvB;
-          }
-          
-          if (boost::is_same<T1,var>::value) {
-            _D.resize(D.rows(),D.cols());
-            _variD.resize(D.rows(),D.cols());
-            for (size_t j = 0; j < D.cols(); j++) {
-              for (size_t i = 0; i < D.rows(); i++) {
-                _variD(i,j) = D(i,j).vi_;
-                _D(i,j) = D(i,j).val();
-              }
-            }
-          }
-          else {
-            _D = D;
-          }
+          initializeB(B,true);
+          initializeD(D);
           
           _value = (_D*_C).trace();
         }
@@ -412,22 +424,7 @@ namespace stan {
         _isVarB(boost::is_same<T3,var>::value),
         _ldlt(A)
         {
-          if (boost::is_same<T3,var>::value) {
-            Eigen::Matrix<double,R3,C3> Bd(B.rows(),B.cols());
-            _variB.resize(B.rows(),B.cols());
-            for (size_t j = 0; j < B.cols(); j++) {
-              for (size_t i = 0; i < B.rows(); i++) {
-                _variB(i,j) = B(i,j).vi_;
-                Bd(i,j) = B(i,j).val();
-              }
-            }
-            _AinvB.noalias() = _ldlt.solve(Bd);
-            _value = (Bd.transpose()*_AinvB).trace();
-          }
-          else {
-            _AinvB.noalias() = _ldlt.solve(B);
-            _value = (B.transpose()*_AinvB).trace();
-          }
+          initializeB(B,false);
         }
         
         const int _Dtype; // 0 = double, 1 = var, 2 = missing
@@ -492,25 +489,25 @@ namespace stan {
      *       trace(D B^T A^-1 B)
      * where D is a square matrix and the LDLT_factor of A is provided.
      */
-    template <int R1,int C1,typename T2,int R2,int C2,typename T3,int R3,int C3>
+    template <int R1,int C1,int R2,int C2,int R3,int C3>
     inline var
     trace_inv_quad_form_ldlt(const Eigen::Matrix<var,R1,C1> &D,
-                             const stan::math::LDLT_factor<T2,R2,C2> &A,
-                             const Eigen::Matrix<T3,R3,C3> &B)
+                             const stan::math::LDLT_factor<double,R2,C2> &A,
+                             const Eigen::Matrix<double,R3,C3> &B)
     {
       stan::math::validate_square(D,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<T2,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<T2,R2,C2>(D,A,B);
+      trace_inv_quad_form_ldlt_impl<double,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<double,R2,C2>(D,A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<T2,R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<double,R2,C2>(_impl));
     }
-    template <typename T1,int R1,int C1,int R2,int C2,typename T3,int R3,int C3>
+    template <typename T1,int R1,int C1,int R2,int C2,int R3,int C3>
     inline var
     trace_inv_quad_form_ldlt(const Eigen::Matrix<T1,R1,C1> &D,
                              const stan::math::LDLT_factor<var,R2,C2> &A,
-                             const Eigen::Matrix<T3,R3,C3> &B)
+                             const Eigen::Matrix<double,R3,C3> &B)
     {
       stan::math::validate_square(D,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
@@ -520,19 +517,33 @@ namespace stan {
       
       return var(new trace_inv_quad_form_ldlt_vari<var,R2,C2>(_impl));
     }
-    template <typename T1,int R1,int C1,typename T2,int R2,int C2,int R3,int C3>
+    template <typename T1,int R1,int C1,int R2,int C2,int R3,int C3>
     inline var
     trace_inv_quad_form_ldlt(const Eigen::Matrix<T1,R1,C1> &D,
-                             const stan::math::LDLT_factor<T2,R2,C2> &A,
+                             const stan::math::LDLT_factor<double,R2,C2> &A,
                              const Eigen::Matrix<var,R3,C3> &B)
     {
       stan::math::validate_square(D,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
       stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<T2,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<T2,R2,C2>(D,A,B);
+      trace_inv_quad_form_ldlt_impl<double,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<double,R2,C2>(D,A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<T2,R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<double,R2,C2>(_impl));
+    }
+    template <typename T1,int R1,int C1,int R2,int C2,int R3,int C3>
+    inline var
+    trace_inv_quad_form_ldlt(const Eigen::Matrix<T1,R1,C1> &D,
+                             const stan::math::LDLT_factor<var,R2,C2> &A,
+                             const Eigen::Matrix<var,R3,C3> &B)
+    {
+      stan::math::validate_square(D,"trace_inv_quad_form_ldlt");
+      stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
+      stan::math::validate_multiplicable(B,D,"trace_inv_quad_form_ldlt");
+      
+      trace_inv_quad_form_ldlt_impl<var,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<var,R2,C2>(D,A,B);
+      
+      return var(new trace_inv_quad_form_ldlt_vari<var,R2,C2>(_impl));
     }
     
     /*
@@ -540,10 +551,10 @@ namespace stan {
      *       trace(B^T A^-1 B)
      * where the LDLT_factor of A is provided.
      */
-    template <int R2,int C2,typename T3,int R3,int C3>
+    template <int R2,int C2,int R3,int C3>
     inline var
     trace_inv_quad_form_ldlt(const stan::math::LDLT_factor<var,R2,C2> &A,
-                             const Eigen::Matrix<T3,R3,C3> &B)
+                             const Eigen::Matrix<var,R3,C3> &B)
     {
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
       
@@ -551,16 +562,27 @@ namespace stan {
       
       return var(new trace_inv_quad_form_ldlt_vari<var,R2,C2>(_impl));
     }
-    template <typename T2,int R2,int C2,int R3,int C3>
+    template <int R2,int C2,int R3,int C3>
     inline var
-    trace_inv_quad_form_ldlt(const stan::math::LDLT_factor<T2,R2,C2> &A,
+    trace_inv_quad_form_ldlt(const stan::math::LDLT_factor<var,R2,C2> &A,
+                             const Eigen::Matrix<double,R3,C3> &B)
+    {
+      stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
+      
+      trace_inv_quad_form_ldlt_impl<var,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<var,R2,C2>(A,B);
+      
+      return var(new trace_inv_quad_form_ldlt_vari<var,R2,C2>(_impl));
+    }
+    template <int R2,int C2,int R3,int C3>
+    inline var
+    trace_inv_quad_form_ldlt(const stan::math::LDLT_factor<double,R2,C2> &A,
                              const Eigen::Matrix<var,R3,C3> &B)
     {
       stan::math::validate_multiplicable(A,B,"trace_inv_quad_form_ldlt");
       
-      trace_inv_quad_form_ldlt_impl<T2,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<T2,R2,C2>(A,B);
+      trace_inv_quad_form_ldlt_impl<double,R2,C2> *_impl = new trace_inv_quad_form_ldlt_impl<double,R2,C2>(A,B);
       
-      return var(new trace_inv_quad_form_ldlt_vari<T2,R2,C2>(_impl));
+      return var(new trace_inv_quad_form_ldlt_vari<double,R2,C2>(_impl));
     }
   }
 }
