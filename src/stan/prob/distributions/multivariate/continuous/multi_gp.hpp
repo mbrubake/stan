@@ -128,7 +128,8 @@ namespace stan {
 //
 //        lp -= 0.5 * dot_product(rows_dot_product(y_Kinv,y),w);
         Eigen::Matrix<T_w,Eigen::Dynamic,Eigen::Dynamic> w_mat(w.asDiagonal());
-        lp -= 0.5 * trace_inv_quad_form_ldlt(w_mat,ldlt_Sigma,y);
+        Eigen::Matrix<T_y,Eigen::Dynamic,Eigen::Dynamic> yT(y.transpose());
+        lp -= 0.5 * trace_inv_quad_form_ldlt(w_mat,ldlt_Sigma,yT);
       }
 
       return lp;
