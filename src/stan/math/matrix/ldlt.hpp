@@ -116,6 +116,7 @@ namespace stan {
       
       return (D*B.transpose()*A._ldltP->solve(B)).trace();
     }
+
     /*
      * Compute the trace of an inverse quadratic form.  I.E., this computes
      *       trace(B^T A^-1 B)
