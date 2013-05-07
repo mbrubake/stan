@@ -447,9 +447,9 @@ namespace stan {
                                   trace_inv_quad_form_ldlt_impl<var,R2,C2,T3,R3,C3> *impl) {
           Eigen::Matrix<double,R2,C2> aA;
           if (impl->_Dtype != 2)
-            aA = -adj*(impl->_AinvB*impl->_D.transpose()*impl->_AinvB.transpose());
+            aA.noalias() = -adj*(impl->_AinvB*impl->_D.transpose()*impl->_AinvB.transpose());
           else
-            aA = -adj*(impl->_AinvB*impl->_AinvB.transpose());
+            aA.noalias() = -adj*(impl->_AinvB*impl->_AinvB.transpose());
           for (size_type j = 0; j < aA.cols(); j++)
             for (size_type i = 0; i < aA.rows(); i++)
               impl->_ldlt._alloc->_variA(i,j)->adj_ += aA(i,j);
@@ -458,9 +458,9 @@ namespace stan {
                                   trace_inv_quad_form_ldlt_impl<T2,R2,C2,var,R3,C3> *impl) {
           Eigen::Matrix<double,R3,C3> aB;
           if (impl->_Dtype != 2)
-            aB = adj*impl->_AinvB*(impl->_D + impl->_D.transpose());
+            aB.noalias() = adj*impl->_AinvB*(impl->_D + impl->_D.transpose());
           else
-            aB = adj*impl->_AinvB;
+            aB.noalias() = adj*impl->_AinvB;
           for (size_type j = 0; j < aB.cols(); j++)
             for (size_type i = 0; i < aB.rows(); i++)
               impl->_variB(i,j)->adj_ += aB(i,j);
