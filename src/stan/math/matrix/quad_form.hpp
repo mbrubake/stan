@@ -15,7 +15,7 @@ namespace stan {
     template<typename DerivedA,typename DerivedB>
     inline typename
     boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
-                        boost::is_same<typename DerivedB::Scalar,double>::value,
+                        boost::is_same<typename DerivedB::Scalar,double>::value && DerivedB::ColsAtCompileTime != 1,
                         Eigen::Matrix<double,DerivedB::ColsAtCompileTime,DerivedB::ColsAtCompileTime> >::type
     quad_form(const Eigen::MatrixBase<DerivedA> &A,
               const Eigen::MatrixBase<DerivedB> &B)
@@ -25,13 +25,26 @@ namespace stan {
       return B.transpose()*A*B;
     }
     
+    template<typename DerivedA,typename DerivedB>
+    inline typename
+    boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
+                        boost::is_same<typename DerivedB::Scalar,double>::value && DerivedB::ColsAtCompileTime == 1,
+                        double >::type
+    quad_form(const Eigen::MatrixBase<DerivedA> &A,
+              const Eigen::MatrixBase<DerivedB> &B)
+    {
+      validate_square(A,"quad_form");
+      validate_multiplicable(A,B,"quad_form");
+      return B.dot(A*B);
+    }
+    
     /**
      * Compute B^T A^-1 B
      **/
     template<typename DerivedA,typename DerivedB>
     inline typename
     boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
-                        boost::is_same<typename DerivedB::Scalar,double>::value,
+                        boost::is_same<typename DerivedB::Scalar,double>::value && DerivedB::ColsAtCompileTime != 1,
                         Eigen::Matrix<double,DerivedB::ColsAtCompileTime,DerivedB::ColsAtCompileTime> >::type
     inv_quad_form(const Eigen::MatrixBase<DerivedA> &A,
                   const Eigen::MatrixBase<DerivedB> &B)
@@ -39,6 +52,18 @@ namespace stan {
       validate_square(A,"inv_quad_form");
       validate_multiplicable(A,B,"inv_quad_form");
       return B.transpose()*A.qr().solve(B);
+    }
+    template<typename DerivedA,typename DerivedB>
+    inline typename
+    boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
+                        boost::is_same<typename DerivedB::Scalar,double>::value && DerivedB::ColsAtCompileTime == 1,
+                        double >::type
+    inv_quad_form(const Eigen::MatrixBase<DerivedA> &A,
+                  const Eigen::MatrixBase<DerivedB> &B)
+    {
+      validate_square(A,"inv_quad_form");
+      validate_multiplicable(A,B,"inv_quad_form");
+      return B.dot(A.qr().solve(B));
     }
     
     /**
@@ -94,3 +119,6 @@ namespace stan {
     }
   }
 }
+
+#endif
+
