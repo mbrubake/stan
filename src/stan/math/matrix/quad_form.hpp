@@ -12,26 +12,20 @@ namespace stan {
     /**
      * Compute B^T A B
      **/
-    template<typename DerivedA,typename DerivedB>
-    inline typename
-    boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
-                        boost::is_same<typename DerivedB::Scalar,double>::value && DerivedB::ColsAtCompileTime != 1,
-                        Eigen::Matrix<double,DerivedB::ColsAtCompileTime,DerivedB::ColsAtCompileTime> >::type
-    quad_form(const Eigen::MatrixBase<DerivedA> &A,
-              const Eigen::MatrixBase<DerivedB> &B)
+    template<int RA,int CA,int RB,int CB>
+    inline Eigen::Matrix<double,CB,CB>
+    quad_form(const Eigen::Matrix<double,RA,CA> &A,
+              const Eigen::Matrix<double,RB,CB> &B)
     {
       validate_square(A,"quad_form");
       validate_multiplicable(A,B,"quad_form");
       return B.transpose()*A*B;
     }
     
-    template<typename DerivedA,typename DerivedB>
-    inline typename
-    boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
-                        boost::is_same<typename DerivedB::Scalar,double>::value && DerivedB::ColsAtCompileTime == 1,
-                        double >::type
-    quad_form(const Eigen::MatrixBase<DerivedA> &A,
-              const Eigen::MatrixBase<DerivedB> &B)
+    template<int RA,int CA,int RB>
+    inline double
+    quad_form(const Eigen::Matrix<double,RA,CA> &A,
+              const Eigen::Matrix<double,RB,1> &B)
     {
       validate_square(A,"quad_form");
       validate_multiplicable(A,B,"quad_form");
