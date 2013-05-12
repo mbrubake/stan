@@ -123,7 +123,7 @@ namespace stan {
 
       public:
         trace_quad_form_vari(trace_quad_form_vari_alloc<TA,RA,CA,TB,RB,CB> *impl)
-        : vari(alloc->compute()), _impl(impl) { }
+        : vari(impl->compute()), _impl(impl) { }
         
         virtual void chain() {
           size_t i,j;
@@ -225,7 +225,7 @@ namespace stan {
         
       public:
         trace_gen_quad_form_vari(trace_gen_quad_form_vari_alloc<TD,RD,CD,TA,RA,CA,TB,RB,CB> *impl)
-        : vari(alloc->compute()), _impl(impl) { }
+        : vari(impl->compute()), _impl(impl) { }
         
         virtual void chain() {
           computeAdjoints(adj_,
