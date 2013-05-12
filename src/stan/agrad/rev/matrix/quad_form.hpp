@@ -175,8 +175,8 @@ namespace stan {
     
     template<typename TA,int RA,int CA,typename TB,int RB,int CB>
     inline typename
-    boost::enable_if_c< (boost::is_same<TA,var>::value ||
-                         boost::is_same<TB,var>::value) && CB != 1,
+    boost::enable_if_c< boost::is_same<TA,var>::value ||
+                        boost::is_same<TB,var>::value,
                         Eigen::Matrix<var,CB,CB> >::type
     quad_form(const Eigen::Matrix<TA,RA,CA> &A,
               const Eigen::Matrix<TB,RB,CB> &B)
@@ -188,13 +188,13 @@ namespace stan {
       
       return baseVari->_impl->_C;
     }
-    template<typename TA,int RA,int CA,typename TB,int RB,int CB>
+    template<typename TA,int RA,int CA,typename TB,int RB>
     inline typename
-    boost::enable_if_c< (boost::is_same<TA,var>::value ||
-                         boost::is_same<TB,var>::value) && CB == 1,
+    boost::enable_if_c< boost::is_same<TA,var>::value ||
+                        boost::is_same<TB,var>::value,
                         var >::type
     quad_form(const Eigen::Matrix<TA,RA,CA> &A,
-              const Eigen::Matrix<TB,RB,CB> &B)
+              const Eigen::Matrix<TB,RB,1> &B)
     {
       stan::math::validate_square(A,"quad_form");
       stan::math::validate_multiplicable(A,B,"quad_form");

@@ -12,13 +12,10 @@ namespace stan {
     /**
      * Compute trace(B^T A B).
      **/
-    template<typename DerivedA,typename DerivedB>
-    inline typename
-    boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
-                        boost::is_same<typename DerivedB::Scalar,double>::value,
-                        double >::type
-    trace_quad_form(const Eigen::MatrixBase<DerivedA> &A,
-                    const Eigen::MatrixBase<DerivedB> &B)
+    template<int RA,int CA,int RB,int CB>
+    inline double
+    trace_quad_form(const Eigen::Matrix<double,RA,CA> &A,
+                    const Eigen::Matrix<double,RB,CB> &B)
     {
       validate_square(A,"trace_quad_form");
       validate_multiplicable(A,B,"trace_quad_form");
@@ -28,15 +25,11 @@ namespace stan {
     /**
      * Compute trace(D B^T A B).
      **/
-    template<typename DerivedD, typename DerivedA,typename DerivedB>
-    inline typename
-    boost::enable_if_c< boost::is_same<typename DerivedD::Scalar,double>::value &&
-                        boost::is_same<typename DerivedA::Scalar,double>::value &&
-                        boost::is_same<typename DerivedB::Scalar,double>::value,
-                        double >::type
-    trace_gen_quad_form(const Eigen::MatrixBase<DerivedD> &D,
-                        const Eigen::MatrixBase<DerivedA> &A,
-                        const Eigen::MatrixBase<DerivedB> &B)
+    template<int RD,int CD,int RA,int CA,int RB,int CB>
+    inline double
+    trace_gen_quad_form(const Eigen::Matrix<double,RD,CD> &D,
+                        const Eigen::Matrix<double,RA,CA> &A,
+                        const Eigen::Matrix<double,RB,CB> &B)
     {
       validate_square(A,"trace_gen_quad_form");
       validate_square(D,"trace_gen_quad_form");
