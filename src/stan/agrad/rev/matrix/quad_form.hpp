@@ -199,7 +199,7 @@ namespace stan {
       stan::math::validate_square(A,"quad_form");
       stan::math::validate_multiplicable(A,B,"quad_form");
       
-      quad_form_vari<TA,RA,CA,TB,RB,CB> *baseVari = new quad_form_vari<TA,RA,CA,TB,RB,CB>(A,B);
+      quad_form_vari<TA,RA,CA,TB,RB,1> *baseVari = new quad_form_vari<TA,RA,CA,TB,RB,1>(A,B);
       
       return baseVari->_impl->_C(0,0);
     }
