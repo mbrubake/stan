@@ -54,6 +54,7 @@
 #include <stan/math/matrix/prod.hpp>
 #include <stan/math/matrix/promote_common.hpp>
 #include <stan/math/matrix/promoter.hpp>
+#include <stan/math/matrix/quad_form.hpp>
 #include <stan/math/matrix/resize.hpp>
 #include <stan/math/matrix/row.hpp>
 #include <stan/math/matrix/rows.hpp>
@@ -72,9 +73,9 @@
 #include <stan/math/matrix/tail.hpp>
 #include <stan/math/matrix/tcrossprod.hpp>
 #include <stan/math/matrix/trace.hpp>
+#include <stan/math/matrix/trace_quad_form.hpp>
 #include <stan/math/matrix/transpose.hpp>
 #include <stan/math/matrix/typedefs.hpp>
-#include <stan/math/matrix/quad_form.hpp>
 #include <stan/math/matrix/validate_column_index.hpp>
 #include <stan/math/matrix/validate_greater.hpp>
 #include <stan/math/matrix/validate_greater_or_equal.hpp>
