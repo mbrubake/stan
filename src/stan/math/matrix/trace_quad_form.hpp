@@ -12,7 +12,7 @@ namespace stan {
     /**
      * Compute trace(B^T A B).
      **/
-    template<typename DerivedD, typename DerivedA,typename DerivedB>
+    template<typename DerivedA,typename DerivedB>
     inline typename
     boost::enable_if_c< boost::is_same<typename DerivedA::Scalar,double>::value &&
                         boost::is_same<typename DerivedB::Scalar,double>::value,

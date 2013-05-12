@@ -95,7 +95,7 @@ namespace stan {
         
         static inline void chainAB(Eigen::Matrix<double,RA,CA> &A,
                                    Eigen::Matrix<var,RB,CB> &B,
-                                   const Eigen::Matrix<double,CB,CB> &adjC)
+                                   const double &adjC)
         {
           size_t i,j;
           Eigen::Matrix<double,RB,CB> Bd(B.rows(),B.cols());
@@ -109,7 +109,7 @@ namespace stan {
         
         static inline void chainAB(Eigen::Matrix<var,RA,CA> &A,
                                    Eigen::Matrix<double,RB,CB> &B,
-                                   const Eigen::Matrix<double,CB,CB> &adjC)
+                                   const double &adjC)
         {
           size_t i,j;
           Eigen::Matrix<double,RA,CA> Ad(A.rows(),A.cols());
@@ -126,14 +126,7 @@ namespace stan {
         : vari(impl->compute()), _impl(impl) { }
         
         virtual void chain() {
-          size_t i,j;
-          Eigen::Matrix<double,CB,CB> adjC(_impl->_C.rows(),_impl->_C.cols());
-          
-          for (j = 0; j < _impl->_C.cols(); j++)
-            for (i = 0; i < _impl->_C.rows(); i++)
-              adjC(i,j) = _impl->_C(i,j).vi_->adj_;
-          
-          chainAB(_impl->_A,_impl->_B,adjC);
+          chainAB(_impl->_A,_impl->_B,adj_);
         };
 
         trace_quad_form_vari_alloc<TA,RA,CA,TB,RB,CB> *_impl;
