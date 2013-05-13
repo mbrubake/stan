@@ -189,7 +189,7 @@ namespace stan {
           Eigen::Matrix<double,RA,CB> BD;
           if (varB || varA)
             BD.noalias() = B*D;
-          if (varA || varD)
+          if (varB || varD)
             AtB.noalias() = A.transpose()*B;
           
           if (varB) {
