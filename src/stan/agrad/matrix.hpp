@@ -6,6 +6,7 @@
 #include <stan/agrad/rev/matrix/initialize_variable.hpp>
 #include <stan/agrad/rev/matrix/typedefs.hpp>
 #include <stan/agrad/rev/matrix/to_var.hpp>
+#include <stan/agrad/rev/matrix/to_val.hpp>
 #include <stan/agrad/rev/matrix/squared_dist.hpp>
 #include <stan/agrad/rev/matrix/dot_self.hpp>
 #include <stan/agrad/rev/matrix/dot_product.hpp>

@@ -5,6 +5,7 @@
 #include <boost/type_traits.hpp>
 #include <stan/math/matrix/Eigen.hpp>
 #include <stan/math/matrix/typedefs.hpp>
+#include <stan/agrad/rev/to_val.hpp>
 #include <stan/agrad/rev/var.hpp>
 #include <stan/agrad/rev/vari.hpp>
 #include <stan/agrad/rev/matrix/typedefs.hpp>
@@ -15,22 +16,6 @@
 namespace stan {
   namespace agrad {
     namespace {
-      template<int R,int C>
-      inline 
-      const Eigen::Matrix<double,R,C> &to_val_mat(const Eigen::Matrix<double,R,C> &M) {
-        return M;
-      }
-      
-      template<int R,int C>
-      inline Eigen::Matrix<double,R,C> to_val_mat(const Eigen::Matrix<var,R,C> &M) {
-        size_t i,j;
-        Eigen::Matrix<double,R,C> Md(M.rows(),M.cols());
-        for (j = 0; j < M.cols(); j++)
-          for (i = 0; i < M.rows(); i++)
-            Md(i,j) = M(i,j).vi_->val_;
-        return Md;
-      }
-      
       template<typename TA,int RA,int CA,typename TB,int RB,int CB>
       class trace_quad_form_vari_alloc : public chainable_alloc {
       public:
@@ -40,8 +25,8 @@ namespace stan {
         { }
         
         double compute() {
-          return stan::math::trace_quad_form(to_val_mat(_A),
-                                             to_val_mat(_B));
+          return stan::math::trace_quad_form(to_val(_A),
+                                             to_val(_B));
         }
         
         Eigen::Matrix<TA,RA,CA>  _A;
@@ -162,9 +147,9 @@ namespace stan {
         { }
         
         double compute() {
-          return stan::math::trace_gen_quad_form(to_val_mat(_D),
-                                                 to_val_mat(_A),
-                                                 to_val_mat(_B));
+          return stan::math::trace_gen_quad_form(to_val(_D),
+                                                 to_val(_A),
+                                                 to_val(_B));
         }
         
         Eigen::Matrix<TD,RD,CD>  _D;
@@ -222,9 +207,9 @@ namespace stan {
         
         virtual void chain() {
           computeAdjoints(adj_,
-                          to_val_mat(_impl->_D),
-                          to_val_mat(_impl->_A),
-                          to_val_mat(_impl->_B),
+                          to_val(_impl->_D),
+                          to_val(_impl->_A),
+                          to_val(_impl->_B),
                           (Eigen::Matrix<var,RD,CD>*)(boost::is_same<TD,var>::value?(&_impl->_D):NULL),
                           (Eigen::Matrix<var,RA,CA>*)(boost::is_same<TA,var>::value?(&_impl->_A):NULL),
                           (Eigen::Matrix<var,RB,CB>*)(boost::is_same<TB,var>::value?(&_impl->_B):NULL));
