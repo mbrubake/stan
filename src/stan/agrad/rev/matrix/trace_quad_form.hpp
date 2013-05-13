@@ -225,9 +225,9 @@ namespace stan {
                           to_val_mat(_impl->_D),
                           to_val_mat(_impl->_A),
                           to_val_mat(_impl->_B),
-                          boost::is_same<TD,var>::value?(&_impl->_D):NULL,
-                          boost::is_same<TA,var>::value?(&_impl->_A):NULL,
-                          boost::is_same<TB,var>::value?(&_impl->_B):NULL);
+                          (Eigen::Matrix<var,RD,CD>*)(boost::is_same<TD,var>::value?(&_impl->_D):NULL),
+                          (Eigen::Matrix<var,RA,CA>*)(boost::is_same<TA,var>::value?(&_impl->_A):NULL),
+                          (Eigen::Matrix<var,RB,CB>*)(boost::is_same<TB,var>::value?(&_impl->_B):NULL));
         }
         
         trace_gen_quad_form_vari_alloc<TD,RD,CD,TA,RA,CA,TB,RB,CB> *_impl;
