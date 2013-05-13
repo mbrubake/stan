@@ -193,21 +193,21 @@ namespace stan {
             AtB.noalias() = A.transpose()*B;
           
           if (varB) {
-            Eigen::Matrix<double,RB,CB> adjB(A*BD + AtB*D.transpose());
+            Eigen::Matrix<double,RB,CB> adjB(adj*(A*BD + AtB*D.transpose()));
             size_t i,j;
             for (j = 0; j < B.cols(); j++)
               for (i = 0; i < B.rows(); i++)
                 (*varB)(i,j).vi_->adj_ += adjB(i,j);
           }
           if (varA) {
-            Eigen::Matrix<double,RA,CA> adjA(B*BD.transpose());
+            Eigen::Matrix<double,RA,CA> adjA(adj*(B*BD.transpose()));
             size_t i,j;
             for (j = 0; j < A.cols(); j++)
               for (i = 0; i < A.rows(); i++)
                 (*varA)(i,j).vi_->adj_ += adjA(i,j);
           }
           if (varD) {
-            Eigen::Matrix<double,RD,CD> adjD(B.transpose()*AtB);
+            Eigen::Matrix<double,RD,CD> adjD(adj*(B.transpose()*AtB));
             size_t i,j;
             for (j = 0; j < D.cols(); j++)
               for (i = 0; i < D.rows(); i++)
