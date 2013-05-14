@@ -8,79 +8,65 @@
 #include <stan/agrad/rev/var.hpp>
 #include <stan/agrad/rev/vari.hpp>
 #include <stan/agrad/rev/matrix/typedefs.hpp>
+#include <stan/agrad/rev/matrix/to_val.hpp>
+#include <stan/math/matrix/quad_form.hpp>
 #include <stan/math/matrix/validate_multiplicable.hpp>
 #include <stan/math/matrix/validate_square.hpp>
+#include <stan/math/matrix/validate_symmetric.hpp>
 
 namespace stan {
   namespace agrad {
     namespace {
       template<typename TA,int RA,int CA,typename TB,int RB,int CB>
       class quad_form_vari_alloc : public chainable_alloc {
-      protected:
-        static inline void computeC(const Eigen::Matrix<var,RA,CA> &A,
-                                    const Eigen::Matrix<var,RB,CB> &B,
-                                    Eigen::Matrix<var,CB,CB> &C) {
+      private:
+        inline void compute(const Eigen::Matrix<double,RA,CA> &A,
+                            const Eigen::Matrix<double,RB,CB> &B)
+        {
           size_t i,j;
-          Eigen::Matrix<double,RA,CA> Ad(A.rows(),A.cols());
-          for (j = 0; j < A.cols(); j++)
-            for (i = 0; i < A.rows(); i++)
-              Ad(i,j) = A(i,j).vi_->val_;
-
-          Eigen::Matrix<double,RB,CB> Bd(B.rows(),B.cols());
-          for (j = 0; j < B.cols(); j++)
-            for (i = 0; i < B.rows(); i++)
-              Bd(i,j) = B(i,j).vi_->val_;
-          
-          Eigen::Matrix<double,CB,CB> Cd(Bd.transpose()*Ad*Bd);
-          for (j = 0; j < C.cols(); j++)
-            for (i = 0; i < C.rows(); i++)
-              C(i,j) = var(new vari(Cd(i,j),false));
+          Eigen::Matrix<double,CB,CB> Cd(B.transpose()*A*B);
+          for (i = 0; i < _C.rows(); i++) {
+            if (_sym) {
+              _C(i,i) = var(new vari(Cd(i,i),false));
+              for (j = i+1; j < _C.cols(); j++) {
+                _C(i,j) = var(new vari(0.5*(Cd(i,j) + Cd(j,i)),false));
+                _C(j,i) = _C(i,j);
+              }
+            }
+            else {
+              for (j = 0; j < _C.cols(); j++) {
+                _C(i,j) = var(new vari(Cd(i,j),false));
+              }
+            }
+          }
         }
-        static inline void computeC(const Eigen::Matrix<double,RA,CA> &Ad,
-                                    const Eigen::Matrix<var,RB,CB> &B,
-                                    Eigen::Matrix<var,CB,CB> &C) {
-          size_t i,j;
-          Eigen::Matrix<double,RB,CB> Bd(B.rows(),B.cols());
-          for (j = 0; j < B.cols(); j++)
-            for (i = 0; i < B.rows(); i++)
-              Bd(i,j) = B(i,j).vi_->val_;
-          
-          Eigen::Matrix<double,CB,CB> Cd(Bd.transpose()*Ad*Bd);
-          for (j = 0; j < C.cols(); j++)
-            for (i = 0; i < C.rows(); i++)
-              C(i,j) = var(new vari(Cd(i,j),false));
-        }
-        static inline void computeC(const Eigen::Matrix<var,RA,CA> &A,
-                                    const Eigen::Matrix<double,RB,CB> &Bd,
-                                    Eigen::Matrix<var,CB,CB> &C) {
-          size_t i,j;
-          Eigen::Matrix<double,RA,CA> Ad(A.rows(),A.cols());
-          for (j = 0; j < A.cols(); j++)
-            for (i = 0; i < A.rows(); i++)
-              Ad(i,j) = A(i,j).vi_->val_;
-
-          Eigen::Matrix<double,CB,CB> Cd(Bd.transpose()*Ad*Bd);
-          for (j = 0; j < C.cols(); j++)
-            for (i = 0; i < C.rows(); i++)
-              C(i,j) = var(new vari(Cd(i,j),false));
-        }
-        
+                              
       public:
         quad_form_vari_alloc(const Eigen::Matrix<TA,RA,CA> &A,
-                             const Eigen::Matrix<TB,RB,CB> &B)
-        : _A(A), _B(B), _C(_B.cols(),_B.cols())
+                             const Eigen::Matrix<TB,RB,CB> &B,
+                             bool symmetric = false)
+        : _A(A), _B(B), _C(_B.cols(),_B.cols()), _sym(symmetric)
         {
-          computeC(_A,_B,_C);
+          compute(to_val(A),to_val(B));
         }
         
         Eigen::Matrix<TA,RA,CA>  _A;
         Eigen::Matrix<TB,RB,CB>  _B;
         Eigen::Matrix<var,CB,CB> _C;
+        bool                     _sym;
       };
       
       template<typename TA,int RA,int CA,typename TB,int RB,int CB>
       class quad_form_vari : public vari {
       protected:
+        static inline void chainA(Eigen::Matrix<double,RA,CA> &A, 
+                                  const Eigen::Matrix<double,RB,CB> &Bd,
+                                  const Eigen::Matrix<double,CB,CB> &adjC) {}
+        static inline void chainB(Eigen::Matrix<double,RB,CB> &B, 
+                                  const Eigen::Matrix<double,RA,CA> &Ad,
+                                  const Eigen::Matrix<double,RB,CB> &Bd,
+                                  const Eigen::Matrix<double,CB,CB> &adjC) {}
+        
         static inline void chainA(Eigen::Matrix<var,RA,CA> &A, 
                                   const Eigen::Matrix<double,RB,CB> &Bd,
                                   const Eigen::Matrix<double,CB,CB> &adjC)
@@ -103,59 +89,22 @@ namespace stan {
               B(i,j).vi_->adj_ += adjB(i,j);
         }
         
-        static inline void chainAB(Eigen::Matrix<var,RA,CA> &A,
-                                   Eigen::Matrix<var,RB,CB> &B,
-                                   const Eigen::Matrix<double,CB,CB> &adjC)
+        inline void chainAB(Eigen::Matrix<TA,RA,CA> &A,
+                            Eigen::Matrix<TB,RB,CB> &B,
+                            const Eigen::Matrix<double,RA,CA> &Ad,
+                            const Eigen::Matrix<double,RB,CB> &Bd,
+                            const Eigen::Matrix<double,CB,CB> &adjC)
         {
-          size_t i,j;
-          Eigen::Matrix<double,RA,CA> Ad(A.rows(),A.cols());
-          Eigen::Matrix<double,RB,CB> Bd(B.rows(),B.cols());
-          
-          for (j = 0; j < B.cols(); j++)
-            for (i = 0; i < B.rows(); i++)
-              Bd(i,j) = B(i,j).vi_->val_;
-          
-          for (j = 0; j < A.cols(); j++)
-            for (i = 0; i < A.rows(); i++)
-              Ad(i,j) = A(i,j).vi_->val_;
-          
           chainA(A,Bd,adjC);
           chainB(B,Ad,Bd,adjC);
-        }
-        
-        static inline void chainAB(Eigen::Matrix<double,RA,CA> &A,
-                                   Eigen::Matrix<var,RB,CB> &B,
-                                   const Eigen::Matrix<double,CB,CB> &adjC)
-        {
-          size_t i,j;
-          Eigen::Matrix<double,RB,CB> Bd(B.rows(),B.cols());
-          
-          for (j = 0; j < B.cols(); j++)
-            for (i = 0; i < B.rows(); i++)
-              Bd(i,j) = B(i,j).vi_->val_;
-          
-          chainB(B,A,Bd,adjC);
-        }
-        
-        static inline void chainAB(Eigen::Matrix<var,RA,CA> &A,
-                                   Eigen::Matrix<double,RB,CB> &B,
-                                   const Eigen::Matrix<double,CB,CB> &adjC)
-        {
-          size_t i,j;
-          Eigen::Matrix<double,RA,CA> Ad(A.rows(),A.cols());
-
-          for (j = 0; j < A.cols(); j++)
-            for (i = 0; i < A.rows(); i++)
-              Ad(i,j) = A(i,j).vi_->val_;
-          
-          chainA(A,B,adjC);
         }
 
       public:
         quad_form_vari(const Eigen::Matrix<TA,RA,CA> &A,
-                       const Eigen::Matrix<TB,RB,CB> &B)
+                       const Eigen::Matrix<TB,RB,CB> &B,
+                       bool symmetric = false)
         : vari(0.0) {
-          _impl = new quad_form_vari_alloc<TA,RA,CA,TB,RB,CB>(A,B);
+          _impl = new quad_form_vari_alloc<TA,RA,CA,TB,RB,CB>(A,B,symmetric);
         }
         
         virtual void chain() {
@@ -166,7 +115,9 @@ namespace stan {
             for (i = 0; i < _impl->_C.rows(); i++)
               adjC(i,j) = _impl->_C(i,j).vi_->adj_;
           
-          chainAB(_impl->_A,_impl->_B,adjC);
+          chainAB(_impl->_A, _impl->_B,
+                  to_val(_impl->_A), to_val(_impl->_B),
+                  adjC);
         };
 
         quad_form_vari_alloc<TA,RA,CA,TB,RB,CB> *_impl;
@@ -200,6 +151,39 @@ namespace stan {
       stan::math::validate_multiplicable(A,B,"quad_form");
       
       quad_form_vari<TA,RA,CA,TB,RB,1> *baseVari = new quad_form_vari<TA,RA,CA,TB,RB,1>(A,B);
+      
+      return baseVari->_impl->_C(0,0);
+    }
+    
+    template<typename TA,int RA,int CA,typename TB,int RB,int CB>
+    inline typename
+    boost::enable_if_c< boost::is_same<TA,var>::value ||
+                        boost::is_same<TB,var>::value,
+                        Eigen::Matrix<var,CB,CB> >::type
+    quad_form_sym(const Eigen::Matrix<TA,RA,CA> &A,
+                  const Eigen::Matrix<TB,RB,CB> &B)
+    {
+      stan::math::validate_square(A,"quad_form_sym");
+      stan::math::validate_symmetric(A,"quad_form_sym");
+      stan::math::validate_multiplicable(A,B,"quad_form_sym");
+      
+      quad_form_vari<TA,RA,CA,TB,RB,CB> *baseVari = new quad_form_vari<TA,RA,CA,TB,RB,CB>(A,B,true);
+      
+      return baseVari->_impl->_C;
+    }
+    template<typename TA,int RA,int CA,typename TB,int RB>
+    inline typename
+    boost::enable_if_c< boost::is_same<TA,var>::value ||
+                        boost::is_same<TB,var>::value,
+                        var >::type
+    quad_form_sym(const Eigen::Matrix<TA,RA,CA> &A,
+                  const Eigen::Matrix<TB,RB,1> &B)
+    {
+      stan::math::validate_square(A,"quad_form_sym");
+      stan::math::validate_symmetric(A,"quad_form_sym");
+      stan::math::validate_multiplicable(A,B,"quad_form_sym");
+      
+      quad_form_vari<TA,RA,CA,TB,RB,1> *baseVari = new quad_form_vari<TA,RA,CA,TB,RB,1>(A,B,true);
       
       return baseVari->_impl->_C(0,0);
     }

@@ -72,11 +72,11 @@ namespace stan {
                             Sigma.cols(), "columns of kernel matrix",
                             &lp))
         return lp;
-      if (!check_positive(function, Sigma.rows(), "Kernel matrix rows", &lp))
+      if (!check_positive(function, Sigma.rows(), "Kernel rows", &lp))
         return lp;
       if (!check_finite(function, Sigma, "Kernel", &lp)) 
         return lp;
-      if (!check_symmetric(function, Sigma, "Kernel matrix", &lp))
+      if (!check_symmetric(function, Sigma, "Kernel", &lp))
         return lp;
       
       LDLT_factor<T_covar,Eigen::Dynamic,Eigen::Dynamic> ldlt_Sigma(Sigma);
