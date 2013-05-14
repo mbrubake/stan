@@ -5,7 +5,7 @@
 #include <boost/type_traits.hpp>
 #include <stan/math/matrix/Eigen.hpp>
 #include <stan/math/matrix/typedefs.hpp>
-#include <stan/agrad/rev/to_val.hpp>
+#include <stan/agrad/rev/matrix/to_val.hpp>
 #include <stan/agrad/rev/var.hpp>
 #include <stan/agrad/rev/vari.hpp>
 #include <stan/agrad/rev/matrix/typedefs.hpp>
