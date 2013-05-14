@@ -62,6 +62,8 @@ namespace stan {
         return lp;
       if (!check_positive(function, Sigma.rows(), "Sigma rows", &lp))
         return lp;
+      if (!check_finite(function, Sigma, "Sigma", &lp)) 
+        return lp;
       if (!check_symmetric(function, Sigma, "Sigma", &lp))
         return lp;
       
@@ -80,7 +82,9 @@ namespace stan {
                             D.cols(), "Columns of D",
                             &lp))
         return lp;
-      if (!check_positive(function, D.rows(), "Sigma rows", &lp))
+      if (!check_positive(function, D.rows(), "D rows", &lp))
+        return lp;
+      if (!check_finite(function, D, "D", &lp)) 
         return lp;
       if (!check_symmetric(function, D, "Sigma", &lp))
         return lp;
@@ -91,7 +95,7 @@ namespace stan {
         message << "D is not positive definite. " 
         << "D(0,0) is %1%.";
         std::string str(message.str());
-        stan::math::dom_err(function,Sigma(0,0),"D",str.c_str(),"",&lp);
+        stan::math::dom_err(function,Sigma(0,0),"",str.c_str(),"",&lp);
         return lp;
       }
 
