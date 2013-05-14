@@ -43,7 +43,7 @@ namespace stan {
                            const Eigen::Matrix<T_Sigma,Eigen::Dynamic,Eigen::Dynamic>& Sigma,
                            const Eigen::Matrix<T_D,Eigen::Dynamic,Eigen::Dynamic>& D) {
       static const char* function = "stan::prob::matrix_normal_prec_log(%1%)";
-      typename boost::math::tools::promote_args<T_y,T_Mu,T_Sigma>::type lp(0.0);
+      typename boost::math::tools::promote_args<T_y,T_Mu,T_Sigma,T_D>::type lp(0.0);
       
       using stan::math::check_not_nan;
       using stan::math::check_symmetric;
