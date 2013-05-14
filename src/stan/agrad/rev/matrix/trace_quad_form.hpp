@@ -36,6 +36,14 @@ namespace stan {
       template<typename TA,int RA,int CA,typename TB,int RB,int CB>
       class trace_quad_form_vari : public vari {
       protected:
+        static inline void chainA(Eigen::Matrix<double,RA,CA> &A, 
+                                  const Eigen::Matrix<double,RB,CB> &Bd,
+                                  const double &adjC) {}
+        static inline void chainB(Eigen::Matrix<double,RB,CB> &B, 
+                                  const Eigen::Matrix<double,RA,CA> &Ad,
+                                  const Eigen::Matrix<double,RB,CB> &Bd,
+                                  const double &adjC) {}
+        
         static inline void chainA(Eigen::Matrix<var,RA,CA> &A, 
                                   const Eigen::Matrix<double,RB,CB> &Bd,
                                   const double &adjC)
@@ -58,60 +66,25 @@ namespace stan {
               B(i,j).vi_->adj_ += adjB(i,j);
         }
         
-        static inline void chainAB(Eigen::Matrix<var,RA,CA> &A,
-                                   Eigen::Matrix<var,RB,CB> &B,
-                                   const double &adjC)
+        inline void chainAB(Eigen::Matrix<TA,RA,CA> &A,
+                            Eigen::Matrix<TB,RB,CB> &B,
+                            const Eigen::Matrix<double,RA,CA> &Ad,
+                            const Eigen::Matrix<double,RB,CB> &Bd,
+                            const double &adjC)
         {
-          size_t i,j;
-          Eigen::Matrix<double,RA,CA> Ad(A.rows(),A.cols());
-          Eigen::Matrix<double,RB,CB> Bd(B.rows(),B.cols());
-          
-          for (j = 0; j < B.cols(); j++)
-            for (i = 0; i < B.rows(); i++)
-              Bd(i,j) = B(i,j).vi_->val_;
-          
-          for (j = 0; j < A.cols(); j++)
-            for (i = 0; i < A.rows(); i++)
-              Ad(i,j) = A(i,j).vi_->val_;
-          
           chainA(A,Bd,adjC);
           chainB(B,Ad,Bd,adjC);
         }
         
-        static inline void chainAB(Eigen::Matrix<double,RA,CA> &A,
-                                   Eigen::Matrix<var,RB,CB> &B,
-                                   const double &adjC)
-        {
-          size_t i,j;
-          Eigen::Matrix<double,RB,CB> Bd(B.rows(),B.cols());
-          
-          for (j = 0; j < B.cols(); j++)
-            for (i = 0; i < B.rows(); i++)
-              Bd(i,j) = B(i,j).vi_->val_;
-          
-          chainB(B,A,Bd,adjC);
-        }
-        
-        static inline void chainAB(Eigen::Matrix<var,RA,CA> &A,
-                                   Eigen::Matrix<double,RB,CB> &B,
-                                   const double &adjC)
-        {
-          size_t i,j;
-          Eigen::Matrix<double,RA,CA> Ad(A.rows(),A.cols());
-
-          for (j = 0; j < A.cols(); j++)
-            for (i = 0; i < A.rows(); i++)
-              Ad(i,j) = A(i,j).vi_->val_;
-          
-          chainA(A,B,adjC);
-        }
 
       public:
         trace_quad_form_vari(trace_quad_form_vari_alloc<TA,RA,CA,TB,RB,CB> *impl)
         : vari(impl->compute()), _impl(impl) { }
         
         virtual void chain() {
-          chainAB(_impl->_A,_impl->_B,adj_);
+          chainAB(_impl->_A, _impl->_B,
+                  to_val(_impl->_A), to_val(_impl->_B),
+                  adj_);
         };
 
         trace_quad_form_vari_alloc<TA,RA,CA,TB,RB,CB> *_impl;
