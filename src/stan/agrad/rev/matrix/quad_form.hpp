@@ -25,16 +25,12 @@ namespace stan {
         {
           size_t i,j;
           Eigen::Matrix<double,CB,CB> Cd(B.transpose()*A*B);
-          for (i = 0; i < _C.rows(); i++) {
-            if (_sym) {
-              _C(i,i) = var(new vari(Cd(i,i),false));
-              for (j = i+1; j < _C.cols(); j++) {
+          for (j = 0; j < _C.cols(); j++) {
+            for (i = 0; i < _C.rows(); i++) {
+              if (_sym) {
                 _C(i,j) = var(new vari(0.5*(Cd(i,j) + Cd(j,i)),false));
-                _C(j,i) = _C(i,j);
               }
-            }
-            else {
-              for (j = 0; j < _C.cols(); j++) {
+              else {
                 _C(i,j) = var(new vari(Cd(i,j),false));
               }
             }
@@ -59,28 +55,30 @@ namespace stan {
       template<typename TA,int RA,int CA,typename TB,int RB,int CB>
       class quad_form_vari : public vari {
       protected:
-        static inline void chainA(Eigen::Matrix<double,RA,CA> &A, 
-                                  const Eigen::Matrix<double,RB,CB> &Bd,
-                                  const Eigen::Matrix<double,CB,CB> &adjC) {}
-        static inline void chainB(Eigen::Matrix<double,RB,CB> &B, 
-                                  const Eigen::Matrix<double,RA,CA> &Ad,
-                                  const Eigen::Matrix<double,RB,CB> &Bd,
-                                  const Eigen::Matrix<double,CB,CB> &adjC) {}
+        inline void chainA(Eigen::Matrix<double,RA,CA> &A, 
+                           const Eigen::Matrix<double,RB,CB> &Bd,
+                           const Eigen::Matrix<double,CB,CB> &adjC) {}
+        inline void chainB(Eigen::Matrix<double,RB,CB> &B,
+                           const Eigen::Matrix<double,RA,CA> &Ad,
+                           const Eigen::Matrix<double,RB,CB> &Bd,
+                           const Eigen::Matrix<double,CB,CB> &adjC) {}
         
-        static inline void chainA(Eigen::Matrix<var,RA,CA> &A, 
-                                  const Eigen::Matrix<double,RB,CB> &Bd,
-                                  const Eigen::Matrix<double,CB,CB> &adjC)
+        inline void chainA(Eigen::Matrix<var,RA,CA> &A,
+                           const Eigen::Matrix<double,RB,CB> &Bd,
+                           const Eigen::Matrix<double,CB,CB> &adjC)
         {
           size_t i,j;
           Eigen::Matrix<double,RA,CA>     adjA(Bd*adjC*Bd.transpose());
-          for (j = 0; j < A.cols(); j++)
-            for (i = 0; i < A.rows(); i++)
+          for (j = 0; j < A.cols(); j++) {
+            for (i = 0; i < A.rows(); i++) {
               A(i,j).vi_->adj_ += adjA(i,j);
+            }
+          }
         }
-        static inline void chainB(Eigen::Matrix<var,RB,CB> &B, 
-                                  const Eigen::Matrix<double,RA,CA> &Ad,
-                                  const Eigen::Matrix<double,RB,CB> &Bd,
-                                  const Eigen::Matrix<double,CB,CB> &adjC)
+        inline void chainB(Eigen::Matrix<var,RB,CB> &B,
+                           const Eigen::Matrix<double,RA,CA> &Ad,
+                           const Eigen::Matrix<double,RB,CB> &Bd,
+                           const Eigen::Matrix<double,CB,CB> &adjC)
         {
           size_t i,j;
           Eigen::Matrix<double,RA,CA>     adjB(Ad*Bd*adjC.transpose() + Ad.transpose()*Bd*adjC);
