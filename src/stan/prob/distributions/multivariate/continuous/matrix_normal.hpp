@@ -67,16 +67,6 @@ namespace stan {
       if (!check_symmetric(function, Sigma, "Sigma", &lp))
         return lp;
       
-      LDLT_factor<T_Sigma,Eigen::Dynamic,Eigen::Dynamic> ldlt_Sigma(Sigma);
-      if (!ldlt_Sigma.success()) {
-        std::ostringstream message;
-        message << "Sigma is not positive definite. " 
-        << "Sigma(0,0) is %1%.";
-        std::string str(message.str());
-        stan::math::dom_err(function,Sigma(0,0),"Sigma",str.c_str(),"",&lp);
-        return lp;
-      }
-      
       if (!check_size_match(function, 
                             D.rows(), "Rows of D",
                             D.cols(), "Columns of D",
@@ -89,16 +79,6 @@ namespace stan {
       if (!check_symmetric(function, D, "Sigma", &lp))
         return lp;
       
-      LDLT_factor<T_D,Eigen::Dynamic,Eigen::Dynamic> ldlt_D(D);
-      if (!ldlt_D.success()) {
-        std::ostringstream message;
-        message << "D is not positive definite. " 
-        << "D(0,0) is %1%.";
-        std::string str(message.str());
-        stan::math::dom_err(function,Sigma(0,0),"",str.c_str(),"",&lp);
-        return lp;
-      }
-
       if (!check_size_match(function, 
                             y.rows(), "Rows of random variable",
                             Mu.rows(), "Rows of location parameter",
@@ -128,10 +108,30 @@ namespace stan {
         lp += NEG_LOG_SQRT_TWO_PI * y.cols() * y.rows();
       
       if (include_summand<propto,T_Sigma>::value) {
+        LDLT_factor<T_Sigma,Eigen::Dynamic,Eigen::Dynamic> ldlt_Sigma(Sigma);
+        if (!ldlt_Sigma.success()) {
+          std::ostringstream message;
+          message << "Sigma is not positive definite. " 
+          << "Sigma[1,1] is %1%.";
+          std::string str(message.str());
+          stan::math::dom_err(function,Sigma(0,0),"",str.c_str(),"",&lp);
+          return lp;
+        }
+        
         lp += log_determinant_ldlt(ldlt_Sigma) * (0.5 * y.rows());
       }
 
       if (include_summand<propto,T_D>::value) {
+        LDLT_factor<T_D,Eigen::Dynamic,Eigen::Dynamic> ldlt_D(D);
+        if (!ldlt_D.success()) {
+          std::ostringstream message;
+          message << "D is not positive definite. " 
+          << "D[1,1] is %1%.";
+          std::string str(message.str());
+          stan::math::dom_err(function,Sigma(0,0),"",str.c_str(),"",&lp);
+          return lp;
+        }
+        
         lp += log_determinant_ldlt(ldlt_D) * (0.5 * y.cols());
       }
       
