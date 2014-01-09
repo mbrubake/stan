@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <boost/type_traits.hpp>
-#include <stan/agrad/agrad.hpp>
+#include <stan/agrad/rev.hpp>
 #include <stan/agrad/fwd/fvar.hpp>
 #include <stan/meta/traits.hpp>
 #include <stan/math/matrix.hpp>
@@ -121,15 +121,15 @@ TEST(MetaTraits, length) {
 
   Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic> m(2,3);
   m << 1, 2, 3, 4, 5, 6;
-  EXPECT_EQ(6, length(m));
+  EXPECT_EQ(6U, length(m));
 
   Eigen::Matrix<double,Eigen::Dynamic,1> rv(2);
   rv << 1, 2;
-  EXPECT_EQ(2, length(rv));
+  EXPECT_EQ(2U, length(rv));
 
   Eigen::Matrix<double,1,Eigen::Dynamic> v(2);
   v << 1, 2;
-  EXPECT_EQ(2, length(v));
+  EXPECT_EQ(2U, length(v));
 }
 
 TEST(MetaTraits, get) {
